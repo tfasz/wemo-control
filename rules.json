@@ -1,0 +1,14 @@
+{
+  "Living Room": {
+    "rules": [
+      {
+        "on": "5:00",
+        "offSunrise": 30
+      },
+      {
+        "onSunset": -30,
+        "off": "23:00"
+      }
+    ]
+  }
+}
