@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import calendar
 import datetime
 import ephem                                  # install via: sudo pip install pyephem
 import json
@@ -10,27 +11,32 @@ import time
 from ouimeaux.environment import Environment  # install via: sudo pip install ouimeaux
 
 os.environ['TZ'] = 'US/Pacific'
-print(sys.version)
+#print(sys.version)
 
-class TimeCalc:
-    now = datetime.datetime.now()
-    print "UTC now: " + str(now)
-   
-    pdt = pytz.timezone("US/Pacific")
-    print "UTC offset: " + str(pdt.utcoffset(now))
-    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    todayOffset = today - pdt.utcoffset(now)
+class TimeCalc:	
+    pdt = pytz.timezone('US/Pacific') 
     o = ephem.Observer()
-    o.date = ephem.Date(todayOffset)
-    print "Ephem Date: " + str(o.date)
     o.lat = '47.561619'
     o.long = '-122.269219'
-    sunrise = ephem.localtime(o.next_rising(ephem.Sun()))
-    sunset = ephem.localtime(o.next_setting(ephem.Sun()))
-    print "Sun up: " + str(sunrise) + " -> " + str(sunset)
+
+    def __init__(self, baseDate=None):
+        if baseDate is None:
+            baseDate = datetime.datetime.now()
+        self.baseDate = self.floorMinute(baseDate)
+        print("Base Date: " + str(self.baseDate))
+        today = self.baseDate.replace(hour=0, minute=0)
+        todayOffset = today - self.pdt.utcoffset(self.baseDate)
+        self.o.date = ephem.Date(todayOffset)
+        self.sunrise = self.floorMinute(ephem.localtime(self.o.next_rising(ephem.Sun())))
+        self.sunset = self.floorMinute(ephem.localtime(self.o.next_setting(ephem.Sun())))
+        print "Sun up: " + str(self.sunrise) + " -> " + str(self.sunset)
+   
+    def floorMinute(self, date):
+        return date.replace(second=0, microsecond=0)
 
     def parseTime(self, value):
-        return time.strptime(value, "%H:%M")
+        dateVal = datetime.datetime.strptime(value, "%H:%M")
+        return self.baseDate.replace(hour=dateVal.hour, minute=dateVal.minute)
 
     def getSunrise(self, offset):
         return self.sunrise + datetime.timedelta(minutes=offset) 
@@ -50,15 +56,15 @@ class Rule:
     def __init__(self, ruleConfig):
         if 'on' in ruleConfig:
             self.timeOn = self.calc.parseTime(ruleConfig['on']) 
-        elif 'onSunset' in ruleConfig:
-            self.timeOn = self.calc.getSunset(ruleConfig['onSunset'])
         elif 'onSunrise' in ruleConfig:
             self.timeOn = self.calc.getSunrise(ruleConfig['onSunrise'])
+        elif 'onSunset' in ruleConfig:
+            self.timeOn = self.calc.getSunset(ruleConfig['onSunset'])
 
         if 'off' in ruleConfig:
             self.timeOff = self.calc.parseTime(ruleConfig['off']) 
         elif 'offSunrise' in ruleConfig:
-            self.timeOff = self.calc.getSunset(ruleConfig['offSunrise'])
+            self.timeOff = self.calc.getSunrise(ruleConfig['offSunrise'])
         elif 'offSunset' in ruleConfig:
             self.timeOff = self.calc.getSunset(ruleConfig['offSunset'])
 
@@ -85,10 +91,16 @@ def on_bridge(bridge):
 #env.start()
 
 def getRules():
+    # Load our rule configuration
     lights = json.loads(open('rules.json').read())
+
+    # Loop through the config settings for all of our lights
     for name, lightConfig in lights.iteritems():
         print name, ":", lightConfig
+
+        # For each rule we want to calc our on/off times
         for ruleConfig in lightConfig['rules']:
+            # Parse the ruleConfig for this rule
             rule = Rule(ruleConfig)
             print rule
 
