@@ -99,12 +99,9 @@ class Light:
 class LightConfig:
     calc = TimeCalc()
 
-    def __init__(self):
-        # Load our rule configuration
-        config = json.loads(open('rules.json').read())
-
+    def __init__(self, jsonConfig):
         # Loop through the config settings for all of our lights
-        for name, lightConfig in config.iteritems():
+        for name, lightConfig in jsonConfig.iteritems():
             light = Light(name, self.calc, lightConfig)
             print light
 
@@ -130,7 +127,7 @@ def on_bridge(bridge):
 
 def getRules():
     # Parse rules into lights
-    lightConfig = LightConfig()
+    lightConfig = LightConfig(json.loads(open('rules.json').read()))
 
 # Run main if executed directly
 if __name__ == '__main__':

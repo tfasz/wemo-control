@@ -11,7 +11,9 @@ class TimeCalcTest(unittest.TestCase):
 
 class RuleTest(unittest.TestCase):
     def testRules(self):
-        tMorning = Rule(json.loads("'rules':{'on': '5:00', 'offSunrise': 30}"))
+        tEmptyRules = LightConfig(json.loads('{"emptyRules":{"rules":[]}}'))
+        tOneRule = LightConfig(json.loads('{"oneRule":{"rules":[{"on":"5:00","off":"18:00"}]}}'))
+        tTwoRules = LightConfig(json.loads('{"twoRules":{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}}'))
 
 # creating a new test suite
 newSuite = unittest.TestSuite()
