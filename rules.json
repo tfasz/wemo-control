@@ -1,14 +1,21 @@
 {
-  "Living Room": {
-    "rules": [
-      {
-        "on": "5:00",
-        "offSunrise": 30
-      },
-      {
-        "onSunset": -30,
-        "off": "23:00"
-      }
-    ]
+  "timezone": "US/Pacific",
+  "location": {
+    "lat":"47.56",
+    "long": "-122.26"
+  },
+  "lights": {
+    "Living Room": {
+      "rules": [
+        {
+          "on": "5:00",
+          "offSunrise": 30
+        },
+        {
+          "onSunset": -30,
+          "off": "23:00"
+        }
+      ]
+    }
   }
 }

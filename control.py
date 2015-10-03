@@ -13,28 +13,38 @@ from ouimeaux.environment import Environment  # install via: sudo pip install ou
 os.environ['TZ'] = 'US/Pacific'
 #print(sys.version)
 
-# Hard-code our location for the time being
+# Location information
 class Location:
-    tz = pytz.timezone('US/Pacific') 
-    obs = ephem.Observer()
-    obs.lat = '47.56'
-    obs.long = '-122.26'
+    def __init__(self, jsonConfig):
+        self.tz = pytz.timezone(jsonConfig['timezone']) 
+        self.lat = jsonConfig['location']['lat']
+        self.long = jsonConfig['location']['long']
+
+# Information about a location at a specific date - namely the sunrise and sunset times
+# in the local timezone.
+class LocationDate:
+    def __init__(self, location, date):
+        self.date = date
+        self.today = self.date.replace(hour=0, minute=0)
+        self.tzOffset = self.today - location.tz.utcoffset(self.today)
+        self.obs = ephem.Observer()
+        self.obs.lat = location.lat 
+        self.obs.long = location.long 
+        self.obs.date = ephem.Date(self.tzOffset)
+        self.sunrise = ephem.localtime(self.obs.next_rising(ephem.Sun()))
+        self.sunset = ephem.localtime(self.obs.next_setting(ephem.Sun()))
 
 # Logic to normalize times in our rules to datetimes. This is both dealing
 # with calculating sunrise/sunsite (+/- offsets) and for parsing HH:MM times.
 class TimeCalc:	
-    loc = Location()
-
-    def __init__(self, baseDate=None):
+    def __init__(self, location, baseDate=None):
         if baseDate is None:
             baseDate = datetime.datetime.now()
         self.baseDate = self.floorMinute(baseDate)
         print("Base Date: " + str(self.baseDate))
-        today = self.baseDate.replace(hour=0, minute=0)
-        todayOffset = today - self.loc.tz.utcoffset(self.baseDate)
-        self.loc.obs.date = ephem.Date(todayOffset)
-        self.sunrise = self.floorMinute(ephem.localtime(self.loc.obs.next_rising(ephem.Sun())))
-        self.sunset = self.floorMinute(ephem.localtime(self.loc.obs.next_setting(ephem.Sun())))
+        locDate = LocationDate(location, self.baseDate)
+        self.sunrise = self.floorMinute(locDate.sunrise)
+        self.sunset = self.floorMinute(locDate.sunset)
         print "Sun up: " + str(self.sunrise) + " -> " + str(self.sunset)
    
     def floorMinute(self, date):
@@ -96,12 +106,13 @@ class Light:
     def __str__(self):
         return "Light " + self.name + " - expectedOn: " + str(self.expectedOn) 
 
-class LightConfig:
-    calc = TimeCalc()
+class WemoConfig:
 
     def __init__(self, jsonConfig):
+        self.location = Location(jsonConfig)
+        self.calc = TimeCalc(self.location)
         # Loop through the config settings for all of our lights
-        for name, lightConfig in jsonConfig.iteritems():
+        for name, lightConfig in jsonConfig['lights'].iteritems():
             light = Light(name, self.calc, lightConfig)
             print light
 
@@ -127,7 +138,7 @@ def on_bridge(bridge):
 
 def getRules():
     # Parse rules into lights
-    lightConfig = LightConfig(json.loads(open('rules.json').read()))
+    wemoConfig = WemoConfig(json.loads(open('rules.json').read()))
 
 # Run main if executed directly
 if __name__ == '__main__':
