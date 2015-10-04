@@ -33,6 +33,10 @@ class RuleTest(unittest.TestCase):
         tTwoRules = Light("twoRules", calcTen, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
         self.assertTrue(tTwoRules.expectedOn, "Two rules at 10 - light is on")
 
+        # Light should be ON even if time roles across midnight
+        tOneRule = Light("oneRule", calcTen, json.loads('{"rules":[{"on":"5:00","off":"2:00"}]}'))
+        self.assertTrue(tOneRule.expectedOn, "Over midnight rule at 10 - light is on")
+
 # creating a new test suite
 newSuite = unittest.TestSuite()
  
