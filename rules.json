@@ -12,8 +12,20 @@
           "offSunrise": 30
         },
         {
-          "onSunset": -30,
-          "off": "23:00"
+          "onSunset": -45,
+          "off": "23:15"
+        }
+      ]
+    },
+    "Front Steps": {
+      "rules": [
+        {
+          "on": "6:30",
+          "offSunrise": 10
+        },
+        {
+          "onSunset": 0,
+          "off": "22:00"
         }
       ]
     }

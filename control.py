@@ -3,6 +3,7 @@
 import calendar
 import datetime
 import ephem                                  # install via: sudo pip install pyephem
+import logging
 import json
 import os
 import pytz
@@ -10,7 +11,17 @@ import sys
 import time
 from ouimeaux.environment import Environment  # install via: sudo pip install ouimeaux
 
-#print(sys.version)
+# Logging
+log = logging.getLogger('control')
+log.setLevel(logging.DEBUG)
+log.addHandler(logging.FileHandler('control.log'))
+
+changeLog = logging.getLogger('control-changes')
+changeLog.setLevel(logging.INFO)
+logFormat = logging.Formatter('%(asctime)s: %(message)s')
+logFile = logging.FileHandler('control-changes.log')
+logFile.setFormatter(logFormat)
+changeLog.addHandler(logFile)
 
 # Location information
 class Location:
@@ -46,11 +57,11 @@ class TimeCalc:
         if baseDate is None:
             baseDate = datetime.datetime.now()
         self.baseDate = self.floorMinute(baseDate)
-        print("Base Date: " + str(self.baseDate))
+        log.debug("Base Date: " + str(self.baseDate))
         locDate = LocationDate(location, self.baseDate)
         self.sunrise = self.floorMinute(locDate.sunrise)
         self.sunset = self.floorMinute(locDate.sunset)
-        print "Sun up: " + str(self.sunrise) + " -> " + str(self.sunset)
+        log.debug("Sun up: " + str(self.sunrise) + " -> " + str(self.sunset))
    
     def floorMinute(self, date):
         return date.replace(second=0, microsecond=0)
@@ -110,7 +121,7 @@ class Light:
         for ruleConfig in config['rules']:
             # Parse the ruleConfig for this rule
             rule = Rule(calc, ruleConfig)
-            print rule
+            log.debug(rule)
             self.rules.append(rule)
 
             # Light should be ON if any rule is enabled
@@ -129,7 +140,7 @@ class WemoConfig:
         for name, lightConfig in jsonConfig['lights'].iteritems():
             light = Light(name, self.calc, lightConfig)
             self.lights[name] = light
-            print light
+            log.debug(light)
 
 class WemoControl:
     def __init__(self, wemoConfig):
@@ -140,30 +151,30 @@ class WemoControl:
         self.env.start()
 
     def on_switch(self, switch):
-        print 'on switch' 
+        log.debug("on_switch")
     
     def on_bridge(self, bridge):
-        print "Bridge:", bridge.name
         bridge.bridge_get_lights()
         for light in bridge.Lights:
-            print "Looking for config for light", light
+            log.debug("Looking for config for light" + light)
             if light in self.wemoConfig.lights:
                 lightConfig = self.wemoConfig.lights[light]
-                print "Light:", light, lightConfig
                 state = bridge.light_get_state(bridge.Lights[light])
-                print "State:", state, " -> Expected State:", lightConfig.expectedOn
+                log.debug("Current state:" + str(state) + ", Expected State:" + str(lightConfig.expectedOn))
                 if state['state'] == "1" and lightConfig.expectedOn == False:
-                    print "Turning light off"
+                    changeLog.info("Turning " + light + " light off")
                     bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
                 elif state['state'] == "0" and lightConfig.expectedOn == True:
-                    print "Turning light on"
+                    changeLog.info("Turning " + light + " light off")
                     bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
 
 def controlLights():
     # Parse rules into lights
+    log.debug("Starting controlLights")
     wemoConfig = WemoConfig(json.loads(open('rules.json').read()))
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
+    log.debug("complete")
 
 # Run main if executed directly
 if __name__ == '__main__':
