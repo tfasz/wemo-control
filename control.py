@@ -15,13 +15,15 @@ from ouimeaux.environment import Environment  # install via: sudo pip install ou
 
 # Logging
 appDir = os.path.dirname(os.path.realpath(sys.argv[0]))
+logFormat = logging.Formatter('%(asctime)s: %(message)s')
 log = logging.getLogger('control')
 log.setLevel(logging.DEBUG)
-log.addHandler(logging.handlers.RotatingFileHandler(appDir + '/control.log', maxBytes=100000, backupCount=5))
+logFile = logging.handlers.RotatingFileHandler(appDir + '/control.log', maxBytes=100000, backupCount=5)
+logFile.setFormatter(logFormat)
+log.addHandler(logFile)
 
 changeLog = logging.getLogger('control-changes')
 changeLog.setLevel(logging.INFO)
-logFormat = logging.Formatter('%(asctime)s: %(message)s')
 logFile = logging.FileHandler(appDir + '/control-changes.log')
 logFile.setFormatter(logFormat)
 changeLog.addHandler(logFile)
@@ -53,9 +55,10 @@ class Weather:
     def __init__(self, location):
        weatherJson = None
        weatherCacheFile = appDir + '/weather.json'
-       if os.path.isfile(weatherCacheFile) and os.path.getmtime(weatherCacheFile) > time.time() - 60000:
-           log.debug("Loading weather data from cache")
-           weatherJson = json.loads(open(weatherCacheFile).read())
+       if os.path.isfile(weatherCacheFile):
+           if os.path.getmtime(weatherCacheFile) > time.time() - 3600:
+               log.debug("Loading weather data from cache")
+               weatherJson = json.loads(open(weatherCacheFile).read())
                 
        if weatherJson == None:
            log.debug("Loading weather data from URL")
@@ -182,11 +185,11 @@ class WemoControl:
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
         for light in bridge.Lights:
-            log.debug("Looking for config for light" + light)
+            log.debug("Looking for config for light: " + light)
             if light in self.wemoConfig.lights:
                 lightConfig = self.wemoConfig.lights[light]
                 state = bridge.light_get_state(bridge.Lights[light])
-                log.debug("Current state:" + str(state) + ", Expected State:" + str(lightConfig.expectedOn))
+                log.debug("Current state: " + str(state) + ", Expected State: " + str(lightConfig.expectedOn))
                 if state['state'] == "1" and lightConfig.expectedOn == False:
                     changeLog.info("Turning " + light + " light off")
                     bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
@@ -196,11 +199,11 @@ class WemoControl:
 
 def controlLights():
     # Parse rules into lights
-    log.debug("Starting controlLights")
+    log.info("**** controlLights: Starting ****")
     wemoConfig = WemoConfig(json.loads(open(appDir + '/rules.json').read()))
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
-    log.debug("complete")
+    log.info("**** controlLights: Complete ****")
 
 # Run main if executed directly
 if __name__ == '__main__':
