@@ -1,4 +1,5 @@
 {
+  "weatherApiKey": "[APIKEY]",
   "timezone": "US/Pacific",
   "location": {
     "lat":"47.56",

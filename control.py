@@ -52,7 +52,8 @@ class LocationDate:
 
 # Start testing weather logic - can we turn on earlier when cloudy
 class Weather:
-    def __init__(self, location):
+    def __init__(self, jsonConfig, location):
+       self.apiKey = jsonConfig['weatherApiKey']
        weatherJson = None
        weatherCacheFile = appDir + '/cache/weather.json'
        if os.path.isfile(weatherCacheFile):
@@ -63,13 +64,18 @@ class Weather:
        if weatherJson == None:
            log.debug("Loading weather data from URL")
            # Fetch from the URL and save to our cache file
-           r = urllib2.urlopen("http://api.openweathermap.org/data/2.5/weather?lat=" + location.lat + "&lon=" + location.long)
-           weatherJson = json.load(r)
-           with open(weatherCacheFile, 'w') as fp:
-               json.dump(weatherJson, fp)
+           try:
+               r = urllib2.urlopen("http://api.openweathermap.org/data/2.5/weather?APPID=" + self.apiKey + "&lat=" + location.lat + "&lon=" + location.long)
+               weatherJson = json.load(r)
+               with open(weatherCacheFile, 'w') as fp:
+                   json.dump(weatherJson, fp)
+           except:
+               log.warn("Error fetching weather JSON from URL")
 
-       if 'clouds' in weatherJson and 'all' in weatherJson['clouds']:
-           log.debug("Clouds: " + str(weatherJson['clouds']['all']))
+       if weatherJson != None and 'clouds' in weatherJson and 'all' in weatherJson['clouds']:
+           log.debug("Found cloud data: " + str(weatherJson['clouds']['all']))
+       else:
+           log.debug("No cloud data")
 
 # Logic to normalize times in our rules to datetimes. This is both dealing
 # with calculating sunrise/sunsite (+/- offsets) and for parsing HH:MM times.
@@ -200,7 +206,7 @@ class WemoControl:
 def controlLights():
     # Parse rules into lights
     log.info("**** controlLights: Starting ****")
-    wemoConfig = WemoConfig(json.loads(open(appDir + '/rules.json').read()))
+    wemoConfig = WemoConfig(json.loads(open(appDir + '/config.json').read()))
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
     log.info("**** controlLights: Complete ****")
