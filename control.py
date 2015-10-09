@@ -85,7 +85,7 @@ class Weather:
 #
 #
 class TimeCalc:	
-    def __init__(self, location, baseDate=None):
+    def __init__(self, jsonConfig, location, baseDate=None):
         if baseDate is None:
             baseDate = datetime.datetime.now()
         self.baseDate = self.floorMinute(baseDate)
@@ -96,7 +96,7 @@ class TimeCalc:
         log.debug("Sun up: " + str(self.sunrise) + " -> " + str(self.sunset))
   
         # Load our weather too
-        weather = Weather(location)
+        weather = Weather(jsonConfig, location)
  
     def floorMinute(self, date):
         return date.replace(second=0, microsecond=0)
@@ -169,7 +169,7 @@ class Light:
 class WemoConfig:
     def __init__(self, jsonConfig):
         self.location = Location(jsonConfig)
-        self.calc = TimeCalc(self.location)
+        self.calc = TimeCalc(jsonConfig, self.location)
         self.lights = {}
         # Loop through the config settings for all of our lights
         for name, lightConfig in jsonConfig['lights'].iteritems():
