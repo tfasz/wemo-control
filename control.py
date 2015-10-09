@@ -54,7 +54,7 @@ class LocationDate:
 class Weather:
     def __init__(self, location):
        weatherJson = None
-       weatherCacheFile = appDir + '/weather.json'
+       weatherCacheFile = appDir + '/cache/weather.json'
        if os.path.isfile(weatherCacheFile):
            if os.path.getmtime(weatherCacheFile) > time.time() - 3600:
                log.debug("Loading weather data from cache")
@@ -191,10 +191,10 @@ class WemoControl:
                 state = bridge.light_get_state(bridge.Lights[light])
                 log.debug("Current state: " + str(state) + ", Expected State: " + str(lightConfig.expectedOn))
                 if state['state'] == "1" and lightConfig.expectedOn == False:
-                    changeLog.info("Turning " + light + " light off")
+                    changeLog.info(light + " -> OFF")
                     bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
                 elif state['state'] == "0" and lightConfig.expectedOn == True:
-                    changeLog.info("Turning " + light + " light on")
+                    changeLog.info(light + " -> ON")
                     bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
 
 def controlLights():
