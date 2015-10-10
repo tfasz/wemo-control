@@ -98,7 +98,11 @@ class TimeCalc:
   
         # Load our weather too
         self.weather = Weather(jsonConfig, location)
- 
+
+    def isWeekend(self):
+        log.debug("Weekend check: " + str(self.baseDate.weekday() >= 5))
+        return self.baseDate.weekday() >= 5
+  
     def floorMinute(self, date):
         return date.replace(second=0, microsecond=0)
 
@@ -127,9 +131,17 @@ class TimeCalc:
 
 class Rule:
     def __init__(self, calc, ruleConfig):
+        # If we have specific on/off times (no sunrise/sunset) we can let rules cross midnight.
+        # Otherwise we currently assume rules have to be within a day.
         self.timeOnExact = False
         self.timeOffExact = False
  
+        # If this is a weekday only rule skip out early if not weekday.
+        if 'weekdayOnly' in ruleConfig and ruleConfig['weekdayOnly']:
+            if calc.isWeekend():
+                self.enabled = False
+                return
+
         # See if we have any weather adjustment for clouds - these only apply
         # for sunrise/sunset rules. 
         onAdjustClouds = 0
@@ -164,7 +176,11 @@ class Rule:
         self.enabled = calc.active(self.timeOn, self.timeOff)
 
     def __str__(self):
-        return "Rule from " + str(self.timeOn) + " -> " + str(self.timeOff) + "  Enabled: " + str(self.enabled)
+        try:
+            return "Rule from " + str(self.timeOn) + " -> " + str(self.timeOff) + " Enabled: " + str(self.enabled)
+        except:
+            pass
+        return "Rule Enabled: " + str(self.enabled)
 
 class Light:
     def __init__(self, name, calc, config):

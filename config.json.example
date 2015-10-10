@@ -10,10 +10,12 @@
       "rules": [
         {
           "on": "5:00",
-          "offSunrise": 30
+          "offSunrise": 30,
+          "offAdjustClouds": 60
         },
         {
           "onSunset": -45,
+          "onAdjustClouds": -60,
           "off": "23:15"
         }
       ]
@@ -21,6 +23,7 @@
     "Front Steps": {
       "rules": [
         {
+          "weekdayOnly": true,
           "on": "6:30",
           "offSunrise": 10
         },
