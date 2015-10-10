@@ -18,13 +18,13 @@ appDir = os.path.dirname(os.path.realpath(sys.argv[0]))
 logFormat = logging.Formatter('%(asctime)s: %(message)s')
 log = logging.getLogger('control')
 log.setLevel(logging.DEBUG)
-logFile = logging.handlers.RotatingFileHandler(appDir + '/control.log', maxBytes=100000, backupCount=5)
+logFile = logging.handlers.RotatingFileHandler(appDir + '/logs/control.log', maxBytes=100000, backupCount=5)
 logFile.setFormatter(logFormat)
 log.addHandler(logFile)
 
 changeLog = logging.getLogger('control-changes')
 changeLog.setLevel(logging.INFO)
-logFile = logging.FileHandler(appDir + '/control-changes.log')
+logFile = logging.FileHandler(appDir + '/logs/control-changes.log')
 logFile.setFormatter(logFormat)
 changeLog.addHandler(logFile)
 
@@ -73,9 +73,10 @@ class Weather:
                log.warn("Error fetching weather JSON from URL")
 
        if weatherJson != None and 'clouds' in weatherJson and 'all' in weatherJson['clouds']:
-           log.debug("Found cloud data: " + str(weatherJson['clouds']['all']))
+           self.clouds = weatherJson['clouds']['all']
        else:
-           log.debug("No cloud data")
+           self.clouds = 0
+       log.debug("Found cloud data: " + str(self.clouds))
 
 # Logic to normalize times in our rules to datetimes. This is both dealing
 # with calculating sunrise/sunsite (+/- offsets) and for parsing HH:MM times.
@@ -96,7 +97,7 @@ class TimeCalc:
         log.debug("Sun up: " + str(self.sunrise) + " -> " + str(self.sunset))
   
         # Load our weather too
-        weather = Weather(jsonConfig, location)
+        self.weather = Weather(jsonConfig, location)
  
     def floorMinute(self, date):
         return date.replace(second=0, microsecond=0)
@@ -105,11 +106,21 @@ class TimeCalc:
         dateVal = datetime.datetime.strptime(value, "%H:%M")
         return self.baseDate.replace(hour=dateVal.hour, minute=dateVal.minute)
 
-    def getSunrise(self, offset):
-        return self.sunrise + datetime.timedelta(minutes=offset) 
+    def getSunrise(self, offset, adjustClouds):
+        sunrise = self.sunrise + datetime.timedelta(minutes=offset) 
+        return self.adjustForClouds(sunrise, adjustClouds)
 
-    def getSunset(self, offset):
-        return self.sunset + datetime.timedelta(minutes=offset) 
+    def getSunset(self, offset, adjustClouds):
+        sunset = self.sunset + datetime.timedelta(minutes=offset) 
+        return self.adjustForClouds(sunset, adjustClouds)
+
+    def adjustForClouds(self, time, adjustClouds):
+        if adjustClouds == 0 or self.weather.clouds <= 0 or self.weather.clouds > 100:
+            return time
+        adjustment = adjustClouds * (self.weather.clouds/100.0)
+        adjustedTime = time + datetime.timedelta(minutes=adjustment)
+        log.debug("Adjusting time for clouds by " + str(adjustment) + " minutes from " + str(time) + " to " + str(adjustedTime))
+        return adjustedTime
 
     def active(self, timeOn, timeOff):
         return (timeOn <= self.baseDate and timeOff > self.baseDate)
@@ -119,21 +130,30 @@ class Rule:
         self.timeOnExact = False
         self.timeOffExact = False
  
+        # See if we have any weather adjustment for clouds - these only apply
+        # for sunrise/sunset rules. 
+        onAdjustClouds = 0
+        offAdjustClouds = 0
+        if 'onAdjustClouds' in ruleConfig:
+            onAdjustClouds = ruleConfig['onAdjustClouds']
+        if 'offAdjustClouds' in ruleConfig:
+            offAdjustClouds = ruleConfig['offAdjustClouds']
+
         if 'on' in ruleConfig:
             self.timeOn = calc.parseTime(ruleConfig['on']) 
             self.timeOnExact = True
         elif 'onSunrise' in ruleConfig:
-            self.timeOn = calc.getSunrise(ruleConfig['onSunrise'])
+            self.timeOn = calc.getSunrise(ruleConfig['onSunrise'], onAdjustClouds)
         elif 'onSunset' in ruleConfig:
-            self.timeOn = calc.getSunset(ruleConfig['onSunset'])
+            self.timeOn = calc.getSunset(ruleConfig['onSunset'], onAdjustClouds)
 
         if 'off' in ruleConfig:
             self.timeOff = calc.parseTime(ruleConfig['off']) 
             self.timeOffExact = True
         elif 'offSunrise' in ruleConfig:
-            self.timeOff = calc.getSunrise(ruleConfig['offSunrise'])
+            self.timeOff = calc.getSunrise(ruleConfig['offSunrise'], offAdjustClouds)
         elif 'offSunset' in ruleConfig:
-            self.timeOff = calc.getSunset(ruleConfig['offSunset'])
+            self.timeOff = calc.getSunset(ruleConfig['offSunset'], offAdjustClouds)
 
         # If we have exact on and off times we assume it can roll across midnight
         if self.timeOnExact and self.timeOffExact:
