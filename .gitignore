@@ -1,4 +1,4 @@
 config.json
 *.pyc
-cache/
-logs/
+cache/*.json
+logs/*.log*
