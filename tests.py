@@ -4,19 +4,21 @@ import datetime
 import unittest
 from control import *
 
-loc = Location(json.loads('{"timezone":"US/Pacific","location":{"lat":"47.56","long":"-122.26"}}'))
+appDir = os.path.dirname(os.path.realpath(sys.argv[0]))
+jsonConfig = json.loads(open(appDir + '/config.json').read())
+loc = Location(jsonConfig)
 
 class TimeCalcTest(unittest.TestCase):
     def testDates(self):
-        tMidnight = TimeCalc(loc, datetime.datetime(2015, 9, 30, 0, 0, 0))
-        tAlmostMidnight = TimeCalc(loc, datetime.datetime(2015, 9, 30, 23, 59, 59))
+        tMidnight = TimeCalc(jsonConfig, loc, datetime.datetime(2015, 9, 30, 0, 0, 0))
+        tAlmostMidnight = TimeCalc(jsonConfig, loc, datetime.datetime(2015, 9, 30, 23, 59, 59))
 
 class RuleTest(unittest.TestCase):
     def testRules(self):
         # Setup some times to calc 
-        calcMidnight = TimeCalc(loc, datetime.datetime(2015, 9, 30, 0, 0, 0))
-        calcFiveThirty = TimeCalc(loc, datetime.datetime(2015, 9, 30, 5, 30, 0))
-        calcTen = TimeCalc(loc, datetime.datetime(2015, 9, 30, 10, 0, 0))
+        calcMidnight = TimeCalc(jsonConfig, loc, datetime.datetime(2015, 9, 30, 0, 0, 0))
+        calcFiveThirty = TimeCalc(jsonConfig, loc, datetime.datetime(2015, 9, 30, 5, 30, 0))
+        calcTen = TimeCalc(jsonConfig,loc, datetime.datetime(2015, 9, 30, 10, 0, 0))
 
         tEmptyRules = Light("emptyRule", calcMidnight, json.loads('{"rules":[]}'))
         self.assertFalse(tEmptyRules.expectedOn, "No rules - light is off")

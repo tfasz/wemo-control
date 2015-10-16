@@ -82,8 +82,9 @@ class Weather:
 # with calculating sunrise/sunsite (+/- offsets) and for parsing HH:MM times.
 #
 # Notes:
-#  - does not currently handle sunrise/sunset calc
-#
+#  - does not currently handle sunrise/sunset calc when they cross midnight
+#    - this is to handle scenario where the sunrise/sunset cross over the
+#      other fixed time and we currently disable the rule
 #
 class TimeCalc:	
     def __init__(self, jsonConfig, location, baseDate=None):
@@ -202,6 +203,7 @@ class Light:
     def __str__(self):
         return "Light " + self.name + " - expectedOn: " + str(self.expectedOn) 
 
+# Parse our configuration file
 class WemoConfig:
     def __init__(self, jsonConfig):
         self.location = Location(jsonConfig)
@@ -221,9 +223,6 @@ class WemoControl:
         self.env = Environment(bridge_callback=self.on_bridge, with_cache=True)
         self.env.start()
 
-    def on_switch(self, switch):
-        log.debug("on_switch")
-    
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
         for light in bridge.Lights:
@@ -239,14 +238,10 @@ class WemoControl:
                     changeLog.info(light + " -> ON")
                     bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
 
-def controlLights():
-    # Parse rules into lights
+# Run main if executed directly
+if __name__ == '__main__':
     log.info("**** controlLights: Starting ****")
     wemoConfig = WemoConfig(json.loads(open(appDir + '/config.json').read()))
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
     log.info("**** controlLights: Complete ****")
-
-# Run main if executed directly
-if __name__ == '__main__':
-    controlLights()
