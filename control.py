@@ -219,9 +219,16 @@ class WemoControl:
     def __init__(self, wemoConfig):
         self.wemoConfig = wemoConfig
 
-    def process(self):
-        self.env = Environment(bridge_callback=self.on_bridge, with_cache=True)
-        self.env.start()
+    def process(self, cache=True):
+        try:
+            self.env = Environment(bridge_callback=self.on_bridge, with_cache=cache)
+            self.env.start()
+        except Exception, e:
+            log.exception("Failed to start environment.")
+
+            # Try calling again without the cache
+            if cache:
+                self.process(cache=False)
 
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
@@ -230,13 +237,20 @@ class WemoControl:
             if light in self.wemoConfig.lights:
                 lightConfig = self.wemoConfig.lights[light]
                 state = bridge.light_get_state(bridge.Lights[light])
+
+                # Log a message based on the current state
                 log.debug("Current state: " + str(state) + ", Expected State: " + str(lightConfig.expectedOn))
-                if state['state'] == "1" and lightConfig.expectedOn == False:
+                if state['state'] == "1" and not lightConfig.expectedOn:
                     changeLog.info(light + " -> OFF")
-                    bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
-                elif state['state'] == "0" and lightConfig.expectedOn == True:
+                elif state['state'] == "0" and lightConfig.expectedOn:
                     changeLog.info(light + " -> ON")
+
+                # Because the light state can get out of sync with manual on/off changes just set the state
+                # every time - even if we think it is already the correct state.
+                if lightConfig.expectedOn:
                     bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
+                else:
+                    bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
 
 # Run main if executed directly
 if __name__ == '__main__':
