@@ -101,7 +101,6 @@ class TimeCalc:
         self.weather = Weather(jsonConfig, location)
 
     def isWeekend(self):
-        log.debug("Weekend check: " + str(self.baseDate.weekday() >= 5))
         return self.baseDate.weekday() >= 5
   
     def floorMinute(self, date):
@@ -232,6 +231,7 @@ class WemoControl:
 
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
+        log.debug("Found lights: " + str(bridge.Lights))
         for light in bridge.Lights:
             log.debug("Looking for config for light: " + light)
             if light in self.wemoConfig.lights:
@@ -248,8 +248,10 @@ class WemoControl:
                 # Because the light state can get out of sync with manual on/off changes just set the state
                 # every time - even if we think it is already the correct state.
                 if lightConfig.expectedOn:
+                    log.debug("Setting light to ON")
                     bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
                 else:
+                    log.debug("Setting light to OFF")
                     bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
 
 # Run main if executed directly
