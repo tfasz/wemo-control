@@ -258,6 +258,7 @@ class WemoControl:
 if __name__ == '__main__':
     log.info("**** controlLights: Starting ****")
     wemoConfig = WemoConfig(json.loads(open(appDir + '/config.json').read()))
+    log.info("**** controlLights: Loaded config - Setting Light Status ****")
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
     log.info("**** controlLights: Complete ****")
