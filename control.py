@@ -102,6 +102,10 @@ class TimeCalc:
 
     def isWeekend(self):
         return self.baseDate.weekday() >= 5
+ 
+   # Check if this is a specific day of the week - 0 for Monday thru 6 for Sunday
+    def isDayOfWeek(self, daysOfWeek):
+        return str(self.baseDate.weekday()) in daysOfWeek
   
     def floorMinute(self, date):
         return date.replace(second=0, microsecond=0)
@@ -136,11 +140,14 @@ class Rule:
         self.timeOnExact = False
         self.timeOffExact = False
  
-        # If this is a weekday only rule skip out early if not weekday.
-        if 'weekdayOnly' in ruleConfig and ruleConfig['weekdayOnly']:
-            if calc.isWeekend():
+        # If this rule is only good for certain days of the week check - apply check
+        # Monday=0 thru Sunday=6
+        if 'daysOfWeek' in ruleConfig and ruleConfig['daysOfWeek']:
+            if not calc.isDayOfWeek(ruleConfig['daysOfWeek']):
                 self.enabled = False
                 return
+            else:
+                log.debug("Day of week rule passed")
 
         # See if we have any weather adjustment for clouds - these only apply
         # for sunrise/sunset rules. 

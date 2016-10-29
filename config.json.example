@@ -1,5 +1,5 @@
 {
-  "weatherApiKey": "[APIKEY]",
+  "weatherApiKey": "[YOURAPIKEY]",
   "timezone": "US/Pacific",
   "location": {
     "lat":"47.56",
@@ -16,20 +16,20 @@
         {
           "onSunset": -45,
           "onAdjustClouds": -60,
-          "off": "23:15"
+          "off": "23:30"
         }
       ]
     },
     "Front Steps": {
       "rules": [
         {
-          "weekdayOnly": true,
-          "on": "6:30",
+          "daysOfWeek": "5",
+          "on": "5:20",
           "offSunrise": 10
         },
         {
           "onSunset": 0,
-          "off": "22:00"
+          "off": "23:00"
         }
       ]
     }

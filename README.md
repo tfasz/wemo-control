@@ -32,6 +32,10 @@ For each light, setup an array of rules. Make sure your light names match the ke
 
 The simplest rules can have fixed `on` or `off` times describing the `HH:MM` that you want lights to come on. 
 
+#### Days of Week
+
+By default rules are valid for every day of the week. You can specify a subset of days of week you would like the rule to be valid for - 0 for Monday thru 6 for Sunday. To have a rule valid Monday thru Friday specify `"daysOfWeek"="01234"`.
+
 #### Sunrise/Sunset Relative Rules
 
 To have a rule turn lights on relative to sunrise or sunset use `onSunrise` or `onSunset` and specifiy a value of the number of minutes you want the rule to be offset from sunrise/sunset. For example, to have a light turn on 45 minutes before sunset specity `"onSunset":-45` or 30 minutes after sunset specify `"onSunset":30`. Similarly you can turn lights off using `offSunset` and `offSunrise` rules.
