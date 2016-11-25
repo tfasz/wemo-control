@@ -225,17 +225,32 @@ class WemoControl:
     def __init__(self, wemoConfig):
         self.wemoConfig = wemoConfig
 
-    def process(self, cache=True):
+    def process(self):
         try:
-            self.env = Environment(bridge_callback=self.on_bridge, with_cache=cache)
+            self.env = Environment(bridge_callback=self.on_bridge, with_subscribers=False)
             self.env.start()
+            self.env.discover(10)
         except Exception, e:
             log.exception("Failed to start environment.")
 
-            # Try calling again without the cache
-            if cache:
-                self.process(cache=False)
-
+    def fadeOn(self, bridge, light):
+        state = bridge.light_get_state(bridge.Lights[light])
+        if state['state'] == "0":
+            log.debug("Fading light " + light + " to ON")
+            bridge.light_set_state(bridge.Lights[light], dim="255", transition_duration="100")
+            time.sleep(10)
+        log.debug("Setting light " + light + " to ON")
+        bridge.light_set_state(bridge.Lights[light], state="1")
+                
+    def fadeOff(self, bridge, light):
+        state = bridge.light_get_state(bridge.Lights[light])
+        if state['state'] == "1":
+            log.debug("Fading light " + light + " to OFF")
+            bridge.light_set_state(bridge.Lights[light], dim="0", transition_duration="100")
+            time.sleep(10)
+        log.debug("Setting light " + light + " to OFF")
+        bridge.light_set_state(bridge.Lights[light], state="0")
+                
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
         log.debug("Found lights: " + str(bridge.Lights))
@@ -255,11 +270,9 @@ class WemoControl:
                 # Because the light state can get out of sync with manual on/off changes just set the state
                 # every time - even if we think it is already the correct state.
                 if lightConfig.expectedOn:
-                    log.debug("Setting light to ON")
-                    bridge.light_set_state(bridge.Lights[light],state="1",dim="255")
+                    self.fadeOn(bridge, light)
                 else:
-                    log.debug("Setting light to OFF")
-                    bridge.light_set_state(bridge.Lights[light],state="0",dim="0")
+                    self.fadeOff(bridge, light)
 
 # Run main if executed directly
 if __name__ == '__main__':
