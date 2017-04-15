@@ -215,8 +215,11 @@ class WemoConfig:
         self.location = Location(jsonConfig)
         self.calc = TimeCalc(jsonConfig, self.location)
         self.lights = {}
+
         # Loop through the config settings for all of our lights
         for name, lightConfig in jsonConfig['lights'].iteritems():
+            # Lowercase light name so our check is case insensitive
+            name = name.lower()
             light = Light(name, self.calc, lightConfig)
             self.lights[name] = light
             log.debug(light)
@@ -255,8 +258,10 @@ class WemoControl:
         bridge.bridge_get_lights()
         log.debug("Found lights: " + str(bridge.Lights))
         for light in bridge.Lights:
+            light = light.lower()
             log.debug("Looking for config for light: " + light)
             if light in self.wemoConfig.lights:
+                log.debug("Found config for light: " + light)
                 lightConfig = self.wemoConfig.lights[light]
                 state = bridge.light_get_state(bridge.Lights[light])
 
