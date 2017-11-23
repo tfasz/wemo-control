@@ -11,8 +11,7 @@ you can adjust and have lights come on earlier on cloudy days.
 
 Make sure you have Python 2.x and `pip` installed. Install the dependencies and clone repo from GitHub.
 ```
-sudo pip install pyephem
-sudo pip install ouimeaux
+sudo pip install pyephem pytz ouimeaux
 git clone git@github.com:tfasz/wemo-control.git
 ```
 
