@@ -30,10 +30,10 @@ change_log.addHandler(log_file)
 
 # Location information
 class Location:
-    def __init__(self, jsonConfig):
-        self.tz = pytz.timezone(jsonConfig['timezone']) 
-        self.lat = jsonConfig['location']['lat']
-        self.long = jsonConfig['location']['long']
+    def __init__(self, json_config):
+        self.tz = pytz.timezone(json_config['timezone']) 
+        self.lat = json_config['location']['lat']
+        self.long = json_config['location']['long']
         os.environ['TZ'] = 'US/Pacific'
 
 # Information about a location at a specific date - namely the sunrise and sunset times
@@ -52,28 +52,28 @@ class LocationDate:
 
 # Start testing weather logic - can we turn on earlier when cloudy
 class Weather:
-    def __init__(self, jsonConfig, location):
-       self.apiKey = jsonConfig['weatherApiKey']
-       weatherJson = None
-       weatherCacheFile = app_dir + '/cache/weather.json'
-       if os.path.isfile(weatherCacheFile):
-           if os.path.getmtime(weatherCacheFile) > time.time() - 3600:
+    def __init__(self, json_config, location):
+       self.apiKey = json_config['weatherApiKey']
+       weather_json = None
+       weather_cache_file = app_dir + '/cache/weather.json'
+       if os.path.isfile(weather_cache_file):
+           if os.path.getmtime(weather_cache_file) > time.time() - 3600:
                log.debug("Loading weather data from cache")
-               weatherJson = json.loads(open(weatherCacheFile).read())
+               weather_json = json.loads(open(weather_cache_file).read())
                 
-       if weatherJson == None:
+       if weather_json == None:
            log.debug("Loading weather data from URL")
            # Fetch from the URL and save to our cache file
            try:
                r = urllib2.urlopen("http://api.openweathermap.org/data/2.5/weather?APPID=" + self.apiKey + "&lat=" + location.lat + "&lon=" + location.long)
-               weatherJson = json.load(r)
-               with open(weatherCacheFile, 'w') as fp:
-                   json.dump(weatherJson, fp)
+               weather_json= json.load(r)
+               with open(weather_cache_file, 'w') as fp:
+                   json.dump(weather_json, fp)
            except:
                log.warn("Error fetching weather JSON from URL")
 
-       if weatherJson != None and 'clouds' in weatherJson and 'all' in weatherJson['clouds']:
-           self.clouds = weatherJson['clouds']['all']
+       if weather_json != None and 'clouds' in weather_json and 'all' in weather_json['clouds']:
+           self.clouds = weather_json['clouds']['all']
        else:
            self.clouds = 0
        log.debug("Found cloud data: " + str(self.clouds))
@@ -87,7 +87,7 @@ class Weather:
 #      other fixed time and we currently disable the rule
 #
 class TimeCalc:	
-    def __init__(self, jsonConfig, location, baseDate=None):
+    def __init__(self, json_config, location, baseDate=None):
         if baseDate is None:
             baseDate = datetime.datetime.now()
         self.baseDate = self.floorMinute(baseDate)
@@ -98,7 +98,7 @@ class TimeCalc:
         log.debug("Sun up: " + str(self.sunrise) + " -> " + str(self.sunset))
   
         # Load our weather too
-        self.weather = Weather(jsonConfig, location)
+        self.weather = Weather(json_config, location)
 
     def isWeekend(self):
         return self.baseDate.weekday() >= 5
@@ -211,21 +211,21 @@ class Device:
 
 # Parse our configuration file
 class WemoConfig:
-    def __init__(self, jsonConfig):
-        self.location = Location(jsonConfig)
-        self.calc = TimeCalc(jsonConfig, self.location)
+    def __init__(self, json_config):
+        self.location = Location(json_config)
+        self.calc = TimeCalc(json_config, self.location)
         self.switches = {}
         self.lights = {}
 
         # Loop through the config settings for all of our switches
-        for name, config in jsonConfig['switches'].iteritems():
+        for name, config in json_config['switches'].iteritems():
             # Lowercase light name so our check is case insensitive
             name = name.lower()
             device = Device(name, self.calc, config)
             self.switches[name] = device
             log.debug(device)
 
-        for name, config in jsonConfig['lights'].iteritems():
+        for name, config in json_config['lights'].iteritems():
             # Lowercase light name so our check is case insensitive
             name = name.lower()
             device = Device(name, self.calc, config)
