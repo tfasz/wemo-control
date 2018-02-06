@@ -14,19 +14,19 @@ import urllib2
 from ouimeaux.environment import Environment  # install via: sudo pip install ouimeaux
 
 # Logging
-appDir = os.path.dirname(os.path.realpath(sys.argv[0]))
-logFormat = logging.Formatter('%(asctime)s: %(message)s')
+app_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+log_format = logging.Formatter('%(asctime)s: %(message)s')
 log = logging.getLogger('control')
 log.setLevel(logging.DEBUG)
-logFile = logging.handlers.RotatingFileHandler(appDir + '/logs/control.log', maxBytes=100000, backupCount=5)
-logFile.setFormatter(logFormat)
-log.addHandler(logFile)
+log_file = logging.handlers.RotatingFileHandler(app_dir + '/logs/control.log', maxBytes=100000, backupCount=5)
+log_file.setFormatter(log_format)
+log.addHandler(log_file)
 
-changeLog = logging.getLogger('control-changes')
-changeLog.setLevel(logging.INFO)
-logFile = logging.FileHandler(appDir + '/logs/control-changes.log')
-logFile.setFormatter(logFormat)
-changeLog.addHandler(logFile)
+change_log = logging.getLogger('control-changes')
+change_log.setLevel(logging.INFO)
+log_file = logging.FileHandler(app_dir + '/logs/control-changes.log')
+log_file.setFormatter(log_format)
+change_log.addHandler(log_file)
 
 # Location information
 class Location:
@@ -55,7 +55,7 @@ class Weather:
     def __init__(self, jsonConfig, location):
        self.apiKey = jsonConfig['weatherApiKey']
        weatherJson = None
-       weatherCacheFile = appDir + '/cache/weather.json'
+       weatherCacheFile = app_dir + '/cache/weather.json'
        if os.path.isfile(weatherCacheFile):
            if os.path.getmtime(weatherCacheFile) > time.time() - 3600:
                log.debug("Loading weather data from cache")
@@ -272,11 +272,11 @@ class WemoControl:
             log.debug("Current state: " + str(state) + ", Expected State: " + str(switch_config.expectedOn))
             if state == 1 and not switch_config.expectedOn:
                 log.debug("Turning switch OFF")
-                changeLog.info(switch.name + " -> OFF")
+                change_log.info(switch.name + " -> OFF")
                 switch.set_state(switch_config.expectedOn)
             elif state == 0 and switch_config.expectedOn:
                 log.debug("Turning switch ON")
-                changeLog.info(switch.name + " -> ON")
+                change_log.info(switch.name + " -> ON")
                 switch.set_state(switch_config.expectedOn)
 
     def on_bridge(self, bridge):
@@ -293,9 +293,9 @@ class WemoControl:
                 # Log a message based on the current state
                 log.debug("Current state: " + str(state) + ", Expected State: " + str(lightConfig.expectedOn))
                 if state['state'] == "1" and not lightConfig.expectedOn:
-                    changeLog.info(light + " -> OFF")
+                    change_log.info(light + " -> OFF")
                 elif state['state'] == "0" and lightConfig.expectedOn:
-                    changeLog.info(light + " -> ON")
+                    change_log.info(light + " -> ON")
 
                 # Because the light state can get out of sync with manual on/off changes just set the state
                 # every time - even if we think it is already the correct state.
@@ -307,7 +307,7 @@ class WemoControl:
 # Run main if executed directly
 if __name__ == '__main__':
     log.info("**** controlLights: Starting ****")
-    wemoConfig = WemoConfig(json.loads(open(appDir + '/config.json').read()))
+    wemoConfig = WemoConfig(json.loads(open(app_dir + '/config.json').read()))
     log.info("**** controlLights: Loaded config - Setting Light Status ****")
     wemoControl = WemoControl(wemoConfig)
     wemoControl.process()
