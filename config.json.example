@@ -5,6 +5,12 @@
     "lat":"47.56",
     "long": "-122.26"
   },
+  "switches": {
+    "Living Room Light Switch": {
+      "onSunset": 0,
+      "off": "23:00"
+    }
+  },
   "lights": {
     "Living Room": {
       "rules": [

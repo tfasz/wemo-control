@@ -189,7 +189,7 @@ class Rule:
             pass
         return "Rule Enabled: " + str(self.enabled)
 
-class Light:
+class Device:
     def __init__(self, name, calc, config):
         self.name = name;
         self.expectedOn = False
@@ -207,22 +207,30 @@ class Light:
                 self.expectedOn = True
 
     def __str__(self):
-        return "Light " + self.name + " - expectedOn: " + str(self.expectedOn) 
+        return "Device " + self.name + " - expectedOn: " + str(self.expectedOn) 
 
 # Parse our configuration file
 class WemoConfig:
     def __init__(self, jsonConfig):
         self.location = Location(jsonConfig)
         self.calc = TimeCalc(jsonConfig, self.location)
+        self.switches = {}
         self.lights = {}
 
-        # Loop through the config settings for all of our lights
-        for name, lightConfig in jsonConfig['lights'].iteritems():
+        # Loop through the config settings for all of our switches
+        for name, config in jsonConfig['switches'].iteritems():
             # Lowercase light name so our check is case insensitive
             name = name.lower()
-            light = Light(name, self.calc, lightConfig)
-            self.lights[name] = light
-            log.debug(light)
+            device = Device(name, self.calc, config)
+            self.switches[name] = device
+            log.debug(device)
+
+        for name, config in jsonConfig['lights'].iteritems():
+            # Lowercase light name so our check is case insensitive
+            name = name.lower()
+            device = Device(name, self.calc, config)
+            self.lights[name] = device
+            log.debug(device)
 
 class WemoControl:
     def __init__(self, wemoConfig):
@@ -230,7 +238,7 @@ class WemoControl:
 
     def process(self):
         try:
-            self.env = Environment(bridge_callback=self.on_bridge, with_subscribers=False)
+            self.env = Environment(switch_callback=self.on_switch, bridge_callback=self.on_bridge, with_subscribers=False)
             self.env.start()
             self.env.discover(10)
         except Exception, e:
@@ -254,6 +262,23 @@ class WemoControl:
         log.debug("Setting light " + light + " to OFF")
         bridge.light_set_state(bridge.Lights[light], state="0")
                 
+    def on_switch(self, switch):
+        log.debug("Found switch: " + str(switch))
+        switch_name = switch.name.lower()
+        if switch_name in self.wemoConfig.switches:
+            log.debug("Found config for switch: " + switch_name)
+            switch_config = self.wemoConfig.switches[switch_name]
+            state = switch.get_state(force_update=True)
+            log.debug("Current state: " + str(state) + ", Expected State: " + str(switch_config.expectedOn))
+            if state == 1 and not switch_config.expectedOn:
+                log.debug("Turning switch OFF")
+                changeLog.info(switch.name + " -> OFF")
+                switch.set_state(switch_config.expectedOn)
+            elif state == 0 and switch_config.expectedOn:
+                log.debug("Turning switch ON")
+                changeLog.info(switch.name + " -> ON")
+                switch.set_state(switch_config.expectedOn)
+
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
         log.debug("Found lights: " + str(bridge.Lights))
