@@ -134,7 +134,7 @@ class TimeCalc:
         return (timeOn <= self.baseDate and timeOff > self.baseDate)
 
 class Rule:
-    def __init__(self, calc, ruleConfig):
+    def __init__(self, calc, rule_config):
         # If we have specific on/off times (no sunrise/sunset) we can let rules cross midnight.
         # Otherwise we currently assume rules have to be within a day.
         self.timeOnExact = False
@@ -142,8 +142,8 @@ class Rule:
  
         # If this rule is only good for certain days of the week check - apply check
         # Monday=0 thru Sunday=6
-        if 'daysOfWeek' in ruleConfig and ruleConfig['daysOfWeek']:
-            if not calc.isDayOfWeek(ruleConfig['daysOfWeek']):
+        if 'daysOfWeek' in rule_config and rule_config['daysOfWeek']:
+            if not calc.isDayOfWeek(rule_config['daysOfWeek']):
                 self.enabled = False
                 return
             else:
@@ -153,26 +153,26 @@ class Rule:
         # for sunrise/sunset rules. 
         onAdjustClouds = 0
         offAdjustClouds = 0
-        if 'onAdjustClouds' in ruleConfig:
-            onAdjustClouds = ruleConfig['onAdjustClouds']
-        if 'offAdjustClouds' in ruleConfig:
-            offAdjustClouds = ruleConfig['offAdjustClouds']
+        if 'onAdjustClouds' in rule_config:
+            onAdjustClouds = rule_config['onAdjustClouds']
+        if 'offAdjustClouds' in rule_config:
+            offAdjustClouds = rule_config['offAdjustClouds']
 
-        if 'on' in ruleConfig:
-            self.timeOn = calc.parseTime(ruleConfig['on']) 
+        if 'on' in rule_config:
+            self.timeOn = calc.parseTime(rule_config['on']) 
             self.timeOnExact = True
-        elif 'onSunrise' in ruleConfig:
-            self.timeOn = calc.getSunrise(ruleConfig['onSunrise'], onAdjustClouds)
-        elif 'onSunset' in ruleConfig:
-            self.timeOn = calc.getSunset(ruleConfig['onSunset'], onAdjustClouds)
+        elif 'onSunrise' in rule_config:
+            self.timeOn = calc.getSunrise(rule_config['onSunrise'], onAdjustClouds)
+        elif 'onSunset' in rule_config:
+            self.timeOn = calc.getSunset(rule_config['onSunset'], onAdjustClouds)
 
-        if 'off' in ruleConfig:
-            self.timeOff = calc.parseTime(ruleConfig['off']) 
+        if 'off' in rule_config:
+            self.timeOff = calc.parseTime(rule_config['off']) 
             self.timeOffExact = True
-        elif 'offSunrise' in ruleConfig:
-            self.timeOff = calc.getSunrise(ruleConfig['offSunrise'], offAdjustClouds)
-        elif 'offSunset' in ruleConfig:
-            self.timeOff = calc.getSunset(ruleConfig['offSunset'], offAdjustClouds)
+        elif 'offSunrise' in rule_config:
+            self.timeOff = calc.getSunrise(rule_config['offSunrise'], offAdjustClouds)
+        elif 'offSunset' in rule_config:
+            self.timeOff = calc.getSunset(rule_config['offSunset'], offAdjustClouds)
 
         # If we have exact on and off times we assume it can roll across midnight
         if self.timeOnExact and self.timeOffExact:
@@ -196,9 +196,9 @@ class Device:
 
         # For each rule we want to calc our on/off times
         self.rules = []
-        for ruleConfig in config['rules']:
-            # Parse the ruleConfig for this rule
-            rule = Rule(calc, ruleConfig)
+        for rule_config in config['rules']:
+            # Parse the rule_config for this rule
+            rule = Rule(calc, rule_config)
             log.debug(rule)
             self.rules.append(rule)
 
@@ -233,8 +233,8 @@ class WemoConfig:
             log.debug(device)
 
 class WemoControl:
-    def __init__(self, wemoConfig):
-        self.wemoConfig = wemoConfig
+    def __init__(self, wemo_config):
+        self.wemo_config = wemo_config
 
     def process(self):
         try:
@@ -265,9 +265,9 @@ class WemoControl:
     def on_switch(self, switch):
         log.debug("Found switch: " + str(switch))
         switch_name = switch.name.lower()
-        if switch_name in self.wemoConfig.switches:
+        if switch_name in self.wemo_config.switches:
             log.debug("Found config for switch: " + switch_name)
-            switch_config = self.wemoConfig.switches[switch_name]
+            switch_config = self.wemo_config.switches[switch_name]
             state = switch.get_state(force_update=True)
             log.debug("Current state: " + str(state) + ", Expected State: " + str(switch_config.expectedOn))
             if state == 1 and not switch_config.expectedOn:
@@ -285,9 +285,9 @@ class WemoControl:
         for light in bridge.Lights:
             light = light.lower()
             log.debug("Looking for config for light: " + light)
-            if light in self.wemoConfig.lights:
+            if light in self.wemo_config.lights:
                 log.debug("Found config for light: " + light)
-                lightConfig = self.wemoConfig.lights[light]
+                lightConfig = self.wemo_config.lights[light]
                 state = bridge.light_get_state(bridge.Lights[light])
 
                 # Log a message based on the current state
@@ -307,8 +307,8 @@ class WemoControl:
 # Run main if executed directly
 if __name__ == '__main__':
     log.info("**** controlLights: Starting ****")
-    wemoConfig = WemoConfig(json.loads(open(app_dir + '/config.json').read()))
+    wemo_config = WemoConfig(json.loads(open(app_dir + '/config.json').read()))
     log.info("**** controlLights: Loaded config - Setting Light Status ****")
-    wemoControl = WemoControl(wemoConfig)
-    wemoControl.process()
+    wemo_control = WemoControl(wemo_config)
+    wemo_control.process()
     log.info("**** controlLights: Complete ****")
