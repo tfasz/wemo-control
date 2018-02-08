@@ -80,7 +80,8 @@ class Weather:
 
 # Keep track of prior state so we can tell if manually overwritten
 class SavedState:
-    def __init__(self):
+    def __init__(self, wemo_config):
+       self.wemo_config = wemo_config
        self.cache_file = app_dir + '/cache/state.json'
        self.state = {}
        if os.path.isfile(self.cache_file):
@@ -91,9 +92,13 @@ class SavedState:
         with open(self.cache_file, 'w') as fp:
             json.dump(self.state, fp)
 
-    def set(self, device_name, state):
-        self.state[device_name] = state
+    def set(self, device_name, device_setting, state):
+        self.state[device_name + ":" + device_setting] = state
 
+    def set_auto_changed(self, device_name, state):
+        self.set(device_name, "auto-changed", 0)
+        self.set(device_name, "auto-timestamp", self.wemo_config.calc.baseDate.strftime("%Y-%m-%d %H:%M:%S"))
+        
 # Logic to normalize times in our rules to datetimes. This is both dealing
 # with calculating sunrise/sunsite (+/- offsets) and for parsing HH:MM times.
 #
@@ -230,7 +235,7 @@ class WemoConfig:
     def __init__(self, json_config):
         self.location = Location(json_config)
         self.calc = TimeCalc(json_config, self.location)
-        self.saved_state = SavedState()
+        self.saved_state = SavedState(self)
         self.switches = {}
         self.lights = {}
 
@@ -294,12 +299,12 @@ class WemoControl:
                 log.debug("Turning switch OFF")
                 change_log.info(switch.name + " -> OFF")
                 switch.set_state(switch_config.expectedOn)
-                self.wemo_config.saved_state.set(switch.name, 0)
+                self.wemo_config.saved_state.set_auto_changed(switch.name, 0)
             elif state == 0 and switch_config.expectedOn:
                 log.debug("Turning switch ON")
                 change_log.info(switch.name + " -> ON")
                 switch.set_state(switch_config.expectedOn)
-                self.wemo_config.saved_state.set(switch.name, 1)
+                self.wemo_config.saved_state.set_auto_changed(switch.name, 1)
 
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
