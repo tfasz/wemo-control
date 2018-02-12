@@ -20,23 +20,23 @@ class RuleTest(unittest.TestCase):
         calcFiveThirty = TimeCalc(jsonConfig, loc, datetime.datetime(2015, 9, 30, 5, 30, 0))
         calcTen = TimeCalc(jsonConfig,loc, datetime.datetime(2015, 9, 30, 10, 0, 0))
 
-        tEmptyRules = Light("emptyRule", calcMidnight, json.loads('{"rules":[]}'))
+        tEmptyRules = Device("emptyRule", calcMidnight, json.loads('{"rules":[]}'))
         self.assertFalse(tEmptyRules.expectedOn, "No rules - light is off")
-        tOneRule = Light("oneRule", calcMidnight, json.loads('{"rules":[{"on":"5:00","off":"18:00"}]}'))
+        tOneRule = Device("oneRule", calcMidnight, json.loads('{"rules":[{"on":"5:00","off":"18:00"}]}'))
         self.assertFalse(tOneRule.expectedOn, "One rule at midnight - light is off")
-        tTwoRules = Light("twoRules", calcMidnight, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
+        tTwoRules = Device("twoRules", calcMidnight, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
         self.assertFalse(tTwoRules.expectedOn, "Two rules at midnight - light is off")
 
         # Light should be ON at 5:30
-        tOneRule = Light("oneRule", calcFiveThirty, json.loads('{"rules":[{"on":"5:00","off":"18:00"}]}'))
+        tOneRule = Device("oneRule", calcFiveThirty, json.loads('{"rules":[{"on":"5:00","off":"18:00"}]}'))
         self.assertTrue(tOneRule.expectedOn, "One rule at 5:30 - light is on")
-        tTwoRules = Light("twoRules", calcFiveThirty, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
+        tTwoRules = Device("twoRules", calcFiveThirty, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
         self.assertTrue(tTwoRules.expectedOn, "Two rules at 5:30 - light is on")
-        tTwoRules = Light("twoRules", calcTen, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
+        tTwoRules = Device("twoRules", calcTen, json.loads('{"rules":[{"on":"5:00","off":"18:00"},{"on":"8:00","off":"20:00"}]}'))
         self.assertTrue(tTwoRules.expectedOn, "Two rules at 10 - light is on")
 
         # Light should be ON even if time roles across midnight
-        tOneRule = Light("oneRule", calcTen, json.loads('{"rules":[{"on":"5:00","off":"2:00"}]}'))
+        tOneRule = Device("oneRule", calcTen, json.loads('{"rules":[{"on":"5:00","off":"2:00"}]}'))
         self.assertTrue(tOneRule.expectedOn, "Over midnight rule at 10 - light is on")
 
 # creating a new test suite

@@ -95,8 +95,20 @@ class SavedState:
     def set(self, device_name, device_setting, state):
         self.state[device_name + ":" + device_setting] = state
 
+    def get(self, device_name, device_setting):
+        k = device_name + ":" + device_setting
+        if k in self.state:
+            return self.state[k]
+        return None
+
+    def clear_auto_changed(self, device_name):
+        self.set(device_name, "auto-changed", None)
+        
+    def get_auto_changed_state(self, device_name):
+        return self.get(device_name, "auto-changed")
+        
     def set_auto_changed(self, device_name, state):
-        self.set(device_name, "auto-changed", 0)
+        self.set(device_name, "auto-changed", state)
         self.set(device_name, "auto-timestamp", self.wemo_config.calc.baseDate.strftime("%Y-%m-%d %H:%M:%S"))
         
 # Logic to normalize times in our rules to datetimes. This is both dealing
@@ -160,12 +172,13 @@ class Rule:
         # Otherwise we currently assume rules have to be within a day.
         self.timeOnExact = False
         self.timeOffExact = False
- 
+        self.valid = False
+        self.enabled = False
+
         # If this rule is only good for certain days of the week check - apply check
         # Monday=0 thru Sunday=6
         if 'daysOfWeek' in rule_config and rule_config['daysOfWeek']:
             if not calc.isDayOfWeek(rule_config['daysOfWeek']):
-                self.enabled = False
                 return
             else:
                 log.debug("Day of week rule passed")
@@ -201,6 +214,7 @@ class Rule:
                 self.timeOff = self.timeOff + datetime.timedelta(days=1)
 
         # Decide if this rule is currently on/off
+        self.valid = True
         self.enabled = calc.active(self.timeOn, self.timeOff)
 
     def __str__(self):
@@ -214,8 +228,11 @@ class Device:
     def __init__(self, name, calc, config):
         self.name = name;
         self.expectedOn = False
+        self.autoTimeOn = None
+        self.autoTimeOff = None
 
-        # For each rule we want to calc our on/off times
+        # Devices can have many rules specified - if any of them are enabled that means the light should be
+        # on.
         self.rules = []
         for rule_config in config['rules']:
             # Parse the rule_config for this rule
@@ -223,12 +240,11 @@ class Device:
             log.debug(rule)
             self.rules.append(rule)
 
-            # Light should be ON if any rule is enabled
             if rule.enabled:
                 self.expectedOn = True
 
     def __str__(self):
-        return "Device " + self.name + " - expectedOn: " + str(self.expectedOn) 
+        return "Device " + self.name + ", autoTimeOn: " + str(self.autoTimeOn) + ", autoTimeOff: " + str(self.autoTimeOff) + ", expectedOn: " + str(self.expectedOn) 
 
 # Parse our configuration file
 class WemoConfig:
@@ -293,14 +309,27 @@ class WemoControl:
         if switch_name in self.wemo_config.switches:
             log.debug("Found config for switch: " + switch_name)
             switch_config = self.wemo_config.switches[switch_name]
-            state = switch.get_state(force_update=True)
-            log.debug("Current state: " + str(state) + ", Expected State: " + str(switch_config.expectedOn))
-            if state == 1 and not switch_config.expectedOn:
+            current_state = switch.get_state(force_update=True)
+            auto_changed_state = self.wemo_config.saved_state.get_auto_changed_state(switch.name)
+            log.debug("Current state: " + str(current_state) + ", Auto changed state: " + str(auto_changed_state) + ", Expected State: " + str(switch_config.expectedOn))
+            if not auto_changed_state is None:
+                if current_state != auto_changed_state:
+                    log.debug("Manual override detected for switch: " + switch_name)
+                    if current_state == 1 and switch_config.expectedOn or current_state == 0 and not switch_config.expectedOn:
+                        # clear the auto_changed state
+                        log.debug("Switch \"" + switch_name + "\" now matches expected state - clearing manual override")
+                        self.wemo_config.saved_state.clear_auto_changed(switch.name)
+                    else:
+                        log.debug("Leaving switch \"" + switch_name + "\" " + ("ON" if current_state == 1 else "OFF"))
+                        return
+
+
+            if current_state == 1 and not switch_config.expectedOn:
                 log.debug("Turning switch OFF")
                 change_log.info(switch.name + " -> OFF")
                 switch.set_state(switch_config.expectedOn)
                 self.wemo_config.saved_state.set_auto_changed(switch.name, 0)
-            elif state == 0 and switch_config.expectedOn:
+            elif current_state == 0 and switch_config.expectedOn:
                 log.debug("Turning switch ON")
                 change_log.info(switch.name + " -> ON")
                 switch.set_state(switch_config.expectedOn)
