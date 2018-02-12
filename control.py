@@ -168,6 +168,7 @@ class TimeCalc:
 
 class Rule:
     def __init__(self, calc, rule_config):
+        log.debug("Parsing rule config: " + str(rule_config))
         # If we have specific on/off times (no sunrise/sunset) we can let rules cross midnight.
         # Otherwise we currently assume rules have to be within a day.
         self.timeOnExact = False
@@ -218,6 +219,8 @@ class Rule:
         self.enabled = calc.active(self.timeOn, self.timeOff)
 
     def __str__(self):
+        if not self.valid:
+            return "Rule invalid"
         try:
             return "Rule from " + str(self.timeOn) + " -> " + str(self.timeOff) + " Enabled: " + str(self.enabled)
         except:
@@ -233,15 +236,17 @@ class Device:
 
         # Devices can have many rules specified - if any of them are enabled that means the light should be
         # on.
+        log.debug("Loading rules for " + name)
         self.rules = []
         for rule_config in config['rules']:
             # Parse the rule_config for this rule
             rule = Rule(calc, rule_config)
             log.debug(rule)
-            self.rules.append(rule)
+            if rule.valid:
+                self.rules.append(rule)
 
-            if rule.enabled:
-                self.expectedOn = True
+                if rule.enabled:
+                    self.expectedOn = True
 
     def __str__(self):
         return "Device " + self.name + ", autoTimeOn: " + str(self.autoTimeOn) + ", autoTimeOff: " + str(self.autoTimeOff) + ", expectedOn: " + str(self.expectedOn) 
