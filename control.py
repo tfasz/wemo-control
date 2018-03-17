@@ -293,66 +293,62 @@ class WemoControl:
     def fadeOn(self, bridge, light):
         state = bridge.light_get_state(bridge.Lights[light])
         if state['state'] == "0":
-            log.debug("Fading light " + light + " to ON")
+            log.debug("Fading light \"" + light + "\" to ON")
             bridge.light_set_state(bridge.Lights[light], dim="255", transition_duration="100")
             time.sleep(10)
-        log.debug("Setting light " + light + " to ON")
+        log.debug("Setting light \"" + light + "\" to ON")
         bridge.light_set_state(bridge.Lights[light], state="1")
                 
     def fadeOff(self, bridge, light):
         state = bridge.light_get_state(bridge.Lights[light])
         if state['state'] == "1":
-            log.debug("Fading light " + light + " to OFF")
+            log.debug("Fading light \"" + light + "\" to OFF")
             bridge.light_set_state(bridge.Lights[light], dim="0", transition_duration="100")
             time.sleep(10)
-        log.debug("Setting light " + light + " to OFF")
+        log.debug("Setting light \"" + light + "\" to OFF")
         bridge.light_set_state(bridge.Lights[light], state="0")
                 
     def on_switch(self, switch):
-        log.debug("Found switch: " + str(switch))
         switch_name = switch.name.lower()
         if switch_name in self.wemo_config.switches:
-            log.debug("Found config for switch: " + switch_name)
             switch_config = self.wemo_config.switches[switch_name]
             current_state = switch.get_state(force_update=True)
+
+            # Look at the last auto-changed state to see if the current state is different. If so we know that someone manually overrode
+            # the switch state and we should not flip it back.
             auto_changed_state = self.wemo_config.saved_state.get_auto_changed_state(switch.name)
-            log.debug("Current state: " + str(current_state) + ", Auto changed state: " + str(auto_changed_state) + ", Expected State: " + str(switch_config.expectedOn))
-            if not auto_changed_state is None:
-                if current_state != auto_changed_state:
-                    log.debug("Manual override detected for switch: " + switch_name)
-                    if current_state == 1 and switch_config.expectedOn or current_state == 0 and not switch_config.expectedOn:
-                        # clear the auto_changed state
-                        log.debug("Switch \"" + switch_name + "\" now matches expected state - clearing manual override")
-                        self.wemo_config.saved_state.clear_auto_changed(switch.name)
-                    else:
-                        log.debug("Leaving switch \"" + switch_name + "\" " + ("ON" if current_state == 1 else "OFF"))
-                        return
+            log.debug("Switch \"" + switch_name + "\" current state: " + str(current_state) + ", auto changed state: " + str(auto_changed_state) + ", expected State: " + str(switch_config.expectedOn))
+            if not auto_changed_state is None and current_state != auto_changed_state:
+                log.debug("Manual override detected for switch \"" + switch_name + "\"")
 
+                # At some point we want to converge the manual override back to our auto state. Typically if someone manually turns the switch
+                # ON or OFF they want to manually control it temporarily but not forever. As a simple rule lets assume that once our auto state
+                # matches the actual state we no longer assume it is a manual override and we go back to our automatic logic.
+                if current_state == 1 and switch_config.expectedOn or current_state == 0 and not switch_config.expectedOn:
+                    # clear the auto_changed state
+                    log.debug("Switch \"" + switch_name + "\" now matches expected state - clearing manual override")
+                    self.wemo_config.saved_state.clear_auto_changed(switch.name)
+                else:
+                    log.debug("Leaving switch \"" + switch_name + "\" " + ("ON" if current_state == 1 else "OFF"))
+                    return
 
-            if current_state == 1 and not switch_config.expectedOn:
-                log.debug("Turning switch OFF")
-                change_log.info(switch.name + " -> OFF")
+            # Now see if we should turn the switch ON or OFF
+            if (current_state == 1 and not switch_config.expectedOn) or (current_state == 0 and switch_config.expectedOn):
+                log.debug("Turning switch \"" + switch_name + "\" " + ("ON" if switch_config.expectedOn else "OFF"))
+                change_log.info(switch_name + " -> " + ("ON" if switch_config.expectedOn else "OFF"))
                 switch.set_state(switch_config.expectedOn)
-                self.wemo_config.saved_state.set_auto_changed(switch.name, 0)
-            elif current_state == 0 and switch_config.expectedOn:
-                log.debug("Turning switch ON")
-                change_log.info(switch.name + " -> ON")
-                switch.set_state(switch_config.expectedOn)
-                self.wemo_config.saved_state.set_auto_changed(switch.name, 1)
+                self.wemo_config.saved_state.set_auto_changed(switch.name, (1 if switch_config.expectedOn else 0))
 
     def on_bridge(self, bridge):
         bridge.bridge_get_lights()
-        log.debug("Found lights: " + str(bridge.Lights))
         for light in bridge.Lights:
             light = light.lower()
-            log.debug("Looking for config for light: " + light)
             if light in self.wemo_config.lights:
-                log.debug("Found config for light: " + light)
                 lightConfig = self.wemo_config.lights[light]
                 state = bridge.light_get_state(bridge.Lights[light])
 
                 # Log a message based on the current state
-                log.debug("Current state: " + str(state) + ", Expected State: " + str(lightConfig.expectedOn))
+                log.debug("Light \"" + light + "\" current state: " + str(state) + ", expected State: " + str(lightConfig.expectedOn))
                 if state['state'] == "1" and not lightConfig.expectedOn:
                     change_log.info(light + " -> OFF")
                 elif state['state'] == "0" and lightConfig.expectedOn:
