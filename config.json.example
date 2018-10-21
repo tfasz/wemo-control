@@ -1,14 +1,32 @@
 {
-  "weatherApiKey": "[YOURAPIKEY]",
+  "weatherApiKey": "[APIKEY]",
   "timezone": "US/Pacific",
   "location": {
     "lat":"47.56",
     "long": "-122.26"
   },
   "switches": {
-    "Living Room Light Switch": {
-      "onSunset": 0,
-      "off": "23:00"
+    "Kitchen Light Switch": {
+      "rules": [
+	{
+          "on": "5:00",
+          "offSunrise": 60,
+	  "offAdjustClouds": 90
+	},
+	{
+          "onSunset": -60,
+          "onAdjustClouds": -90,
+          "off": "23:30"
+	}
+      ]
+    },
+    "Front Steps Light Switch": {
+      "rules": [
+	{
+          "onSunset": 0,
+          "off": "23:00"
+	}
+      ]
     }
   },
   "lights": {
@@ -16,26 +34,13 @@
       "rules": [
         {
           "on": "5:00",
-          "offSunrise": 30,
-          "offAdjustClouds": 60
+          "offSunrise": 60,
+          "offAdjustClouds": 90
         },
         {
-          "onSunset": -45,
-          "onAdjustClouds": -60,
+          "onSunset": -60,
+          "onAdjustClouds": -90,
           "off": "23:30"
-        }
-      ]
-    },
-    "Front Steps": {
-      "rules": [
-        {
-          "daysOfWeek": "5",
-          "on": "5:20",
-          "offSunrise": 10
-        },
-        {
-          "onSunset": 0,
-          "off": "23:00"
         }
       ]
     }
